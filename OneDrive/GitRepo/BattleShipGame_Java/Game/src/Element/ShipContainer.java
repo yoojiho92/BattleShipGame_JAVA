@@ -1,9 +1,8 @@
-package BattleShip.Element;
+package Element;
 
 import java.util.ArrayList;
 
 public class ShipContainer {
-
     private ArrayList<Ship> shipArray;
 
     public ShipContainer(){
@@ -36,4 +35,3 @@ public class ShipContainer {
         return shipArray;
     }
 }
-

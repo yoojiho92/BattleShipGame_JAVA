@@ -1,8 +1,8 @@
-package BattleShip.Gui;
+package Gui;
 
-import BattleShip.Element.ShipContainer;
-import BattleShip.Element.ShipPutDel;
-import BattleShip.Element.Grid;
+import Element.Grid;
+import Element.ShipContainer;
+import Element.ShipPutDel;
 
 import javax.swing.*;
 import java.awt.*;
@@ -10,7 +10,9 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import java.io.PrintWriter;
+import java.io.*;
+import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.util.Random;
 
 
@@ -32,13 +34,13 @@ public class GameBoard {
     JPanel chatPanel;
     JPanel sendPanel;
 
-    Button buttonSend;
+    JButton buttonSend;
     JTextField chatTextField;
     TextArea chatTextArea;
     TextArea localTextArea;
     TextArea comTextArea;
+    Socket socket;
 
-    //Constructs a game board. Defines the size of each label dimension for the game board and makes AI to put ships in the board.
     public GameBoard(){
         mainFrame = new JFrame();
 
@@ -51,10 +53,10 @@ public class GameBoard {
         personPanel1 = new JPanel();
         personPanel2 = new JPanel();
 
-        buttonSend = new Button("Send");
+        buttonSend = new JButton("Send");
         chatTextField = new JTextField();
-        chatTextArea = new TextArea(15, 30);
-        localTextArea = new TextArea(15, 50);
+        chatTextArea = new TextArea(10, 30);
+        localTextArea = new TextArea(5, 50);
         comTextArea = new TextArea(5,50);
 
         shipContainer = new ShipContainer();
@@ -95,37 +97,19 @@ public class GameBoard {
         BorderLayout fl = new BorderLayout();
         mainPanel.setLayout(fl);
 
-        mainPanel.add(person1_grid.getJGrid(), BorderLayout.WEST);
-        mainPanel.add(person2_grid.getJGrid(), BorderLayout.EAST);
-        mainPanel.add(chatPanel, BorderLayout.SOUTH);
+        mainPanel.add(person1_grid.getJGrid(),BorderLayout.WEST);
+        mainPanel.add(person2_grid.getJGrid(),BorderLayout.EAST);
+        mainPanel.add(chatPanel,BorderLayout.SOUTH);
         mainFrame.add(mainPanel);
 
         mainFrame.pack();
-        Dimension dim = new Dimension(1000,900);
+        Dimension dim = new Dimension(1000,700);
         mainFrame.setPreferredSize(dim);
         mainFrame.setVisible(true);
-        setComShip();
 
-        localTextArea.append("? :설명\n" +
-                "현재 배치 할 수있는 배 확인\n" +
-                "/C : 현재 배치 가능한 배 출력\n" +
-                "\n/P : 배치:\n" +
-                "%기준좌표 & X축 배치 방향 & Y축 배치 방향 & 배 번호 %\n" +
-                " 기준 좌표  = \"X축좌표, Y축좌표\"\n" +
-                "X축 배치 방향 = 1 or -1\n" +
-                " Y축 배치 방향 = 1 or -1\n" +
-                " ex) %G,10&1&-1&2%\n" +
-                " G,10 = G,10좌표 기준으로\n" +
-                "1 = 배의 size만큼 X축 G 에서 G + size만큼 배를배치\n" +
-                " -1 = Y축 10에서 10 - num 까지 배를 배치\n" +
-                "\n/D : 드랍설명\n" +
-                "|Drop좌표|\n" +
-                " Drop좌표 = X축,좌표 Y축좌표\n" +
-                "  ex) |A,10| => A,10에 해당하는  상대 배를 Drop\n");
+        setComShip();
     }
 
-    //Takes in the message entered in the chat field and breaks the String into pieces and turns in information
-    // as a parameter to each methods so methods can properly execute their job as entered
     private void sendMessage() {
         try {
             PrintWriter pw;
@@ -144,22 +128,13 @@ public class GameBoard {
                 chatTextField.setText("");
                 chatTextField.requestFocus();
             }else if(message.indexOf("?") != -1){
-                localTextArea.append("? :설명\n" +
-                                     "현재 배치 할 수있는 배 확인\n" +
-                                     "/C : 현재 배치 가능한 배 출력\n" +
-                                     "\n/P : 배치:\n" +
-                                     "%기준좌표 & X축 배치 방향 & Y축 배치 방향 & 배 번호 %\n" +
-                                     " 기준 좌표  = \"X축좌표, Y축좌표\"\n" +
-                                     "X축 배치 방향 = 1 or -1\n" +
-                                     " Y축 배치 방향 = 1 or -1\n" +
-                                     " ex) %G,10&1&-1&2%\n" +
-                                     " G,10 = G,10좌표 기준으로\n" +
-                                     "1 = 배의 size만큼 X축 G 에서 G + size만큼 배를배치\n" +
-                                     " -1 = Y축 10에서 10 - num 까지 배를 배치\n" +
-                                     "\n/D : 드랍설명\n" +
-                                     "|Drop좌표|\n" +
-                                     " Drop좌표 = X축,좌표 Y축좌표\n" +
-                                     "  ex) |A,10| => A,10에 해당하는  상대 배를 Drop\n");
+                for(int i =0; i < shipContainer.getShipArray().size(); i++){
+                    localTextArea.append("Index : " + i +"Ship Name :" + shipContainer.getShipArray().get(i).getShipName() +
+                                          " Ship Size : " +shipContainer.getShipArray().get(i).getSize() +
+                                         "Ship Num : " + shipContainer.getShipArray().get(i).getNum()+"\n");
+                }
+                chatTextField.setText("");
+                chatTextField.requestFocus();
             }
             else if(message.indexOf("|") != -1){
                 if(shipContainer.getShipArray().size() ==0){
@@ -178,39 +153,12 @@ public class GameBoard {
                     chatTextArea.append("------------------\n");
                 }
 
-            }else if(message.equals("/C")){
-                for(int i =0; i < shipContainer.getShipArray().size(); i++){
-                    localTextArea.append("--------------------------");
-                    localTextArea.append("Index : " + i +"Ship Name :" + shipContainer.getShipArray().get(i).getShipName() +
-                            " Ship Size : " +shipContainer.getShipArray().get(i).getSize() +
-                            "Ship Num : " + shipContainer.getShipArray().get(i).getNum()+"\n");
-                }
-                chatTextField.setText("");
-                chatTextField.requestFocus();
-            }else if(message.equals("/P")){
-                localTextArea.append(
-                        "\n/P : 배치:\n" +
-                        "%기준좌표 & X축 배치 방향 & Y축 배치 방향 & 배 번호 %\n" +
-                        " 기준 좌표  = \"X축좌표, Y축좌표\"\n" +
-                        "X축 배치 방향 = 1 or -1\n" +
-                        " Y축 배치 방향 = 1 or -1\n" +
-                        " ex) %G,10&1&-1&2%\n" +
-                        " G,10 = G,10좌표 기준으로\n" +
-                        "1 = 배의 size만큼 X축 G 에서 G + size만큼 배를배치\n" +
-                        " -1 = Y축 10에서 10 - num 까지 배를 배치\n");
-            }else if(message.equals("/D")){
-                localTextArea.append(
-                        "\n/D : 드랍설명\n" +
-                        "|Drop좌표|\n" +
-                        " Drop좌표 = X축,좌표 Y축좌표\n" +
-                        "  ex) |A,10| => A,10에 해당하는  상대 배를 Drop\n");
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    //Assigns ships randomly for AI player
     private void setComShip(){
         while (shipContainer2.getShipArray().size() != 0){
             Random r = new Random();
@@ -230,22 +178,20 @@ public class GameBoard {
         }
     }
 
-    //Checks the AI has put ships correctly
     private boolean comGridCK(){
         boolean result =true;
         for(int i = 0; i < 25; i++){
-            if(person2_grid.getGrid().get(0)[i].getState() == 2 || person2_grid.getGrid().get(i)[1].getState() == 2){
-                person2_grid = new Grid();
-                shipContainer2 = new ShipContainer();
-                person2ShipPutDel.setGrid(person2_grid);
-                person2ShipPutDel.setShipList(shipContainer2);
-                result = false;
-            }
+           if(person2_grid.getGrid().get(0)[i].getState() == 2 || person2_grid.getGrid().get(i)[1].getState() == 2){
+               person2_grid = new Grid();
+               shipContainer2 = new ShipContainer();
+               person2ShipPutDel.setGrid(person2_grid);
+               person2ShipPutDel.setShipList(shipContainer2);
+               result = false;
+           }
         }
         return result;
     }
 
-    //Makes AI to attack the cell in its turn
     private void comRDrop(){
         Random r = new Random();
         int x = r.nextInt(24);
